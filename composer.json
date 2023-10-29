@@ -1,0 +1,20 @@
+{
+    "name": "triggerfish/wp-db-anon",
+    "type": "wordpress-plugin",
+    "require": {
+        "composer/installers": "^1.11",
+        "vlucas/phpdotenv": "^5.4",
+        "fakerphp/faker": "^1.9",
+        "wp-cli/wp-cli": "^2.5"
+    },
+    "extra": {
+        "installer-paths": {
+            "wp-content/plugins/{$name}/": ["type:wordpress-plugin"]
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "composer/installers": true
+        }
+    }
+}
