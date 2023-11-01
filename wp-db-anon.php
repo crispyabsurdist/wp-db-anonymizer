@@ -3,7 +3,8 @@
 Plugin Name: WP DB Anon Plugin
 Description: Anonymizes personal data in the WordPress database during export.
 Version: 1.0
-Author: Markus Hedenborn [markus.hedenborn@triggerfish.se]
+Author: Markus Hedenborn
+Mail: markus.hedenborn@triggerfish.se
 */
 
 if (!defined('ABSPATH')) {
@@ -23,19 +24,8 @@ class DatabaseAnonymizer
 		$this->faker = Factory::create();
 	}
 
-	public function anonymizeDatabase($assoc_args)
+	public function anonymizeDatabase()
 	{
-		$dryRun = isset($assoc_args['dry-run']);
-
-		// TODO: Create a real dry-run mode
-		if ($dryRun) {
-			WP_CLI::log("Performing a dry run...");
-			WP_CLI::log("Simulating database export...");
-			WP_CLI::log("Simulating data anonymization...");
-			WP_CLI::success("Dry run complete. No actual changes were made.");
-			return;
-		}
-
 		$currentPath = getcwd();
 
 		if (!$currentPath) {
@@ -44,6 +34,7 @@ class DatabaseAnonymizer
 		}
 
 		$dbName = DB_NAME;
+		$tempDbName = $dbName . '_temp_' . date("Y_m_d_H_i_s");
 		$exportPath = $currentPath . '/' . $dbName . '.sql';
 		$anonExportPath = $currentPath . '/' . $dbName . '_anonymized.sql';
 
@@ -52,23 +43,26 @@ class DatabaseAnonymizer
 			return;
 		}
 
-		// here is the smart part ;)
-		// Step 1: Export the current database as a backup
+		// Step 1: Export the current production database to an SQL dump
 		$this->exportDatabase($exportPath);
 
-		// Step 2: Anonymize data in the current database
-		if (!$this->anonymizeDataInDatabase()) {
-			WP_CLI::error("Failed to anonymize data in the database.");
-			return;
+		// Step 2: Create a temporary database and import the SQL dump into it
+		$this->createTempDatabase($tempDbName);
+		$this->importToDatabase($tempDbName, $exportPath);
+
+		// Step 3: Anonymize data in the temporary database
+		$this->anonymizeDataInTempDatabase($tempDbName);
+
+		// Step 4: Export the anonymized data from the temporary database
+		$this->exportFromTempDatabase($tempDbName, $anonExportPath);
+
+		// Step 5: Delete the temporary database and the original dump
+		$this->deleteTempDatabase($tempDbName);
+		if (file_exists($exportPath)) {
+			unlink($exportPath);
 		}
 
-		// Step 3: Export the anonymized database
-		$this->exportDatabase($anonExportPath);
-
-		// Step 4: Restore the original database from the backup
-		$this->restoreDatabase($exportPath);
-
-		WP_CLI::success("The data is now as fake as the Kardashians. Anonymized data -> {$anonExportPath}");
+		WP_CLI::success("Data anonymized and stored at {$anonExportPath}.");
 	}
 
 	protected function exportDatabase($sqlFile)
@@ -76,37 +70,28 @@ class DatabaseAnonymizer
 		exec("wp db export {$sqlFile}");
 	}
 
-	protected function restoreDatabase($sqlFile)
+	protected function createTempDatabase($tempDbName)
 	{
-		exec("wp db import {$sqlFile}", $output, $return_var);
-
-		if ($return_var !== 0) {
-			WP_CLI::error("Failed to import the original database from the backup.");
-			return false;
-		}
-
-		if (!unlink($sqlFile)) {
-			WP_CLI::warning("Could not delete the original SQL file. You might want to remove it manually.");
-		} else {
-			WP_CLI::success("Original SQL file deleted successfully.");
-		}
-
-		return true;
+		exec("mysql -u " . DB_USER . " -p'" . DB_PASSWORD . "' -e 'CREATE DATABASE {$tempDbName}'");
 	}
 
-	protected function anonymizeDataInDatabase()
+	protected function importToDatabase($tempDbName, $sqlFile)
 	{
-		global $wpdb;
+		exec("mysql -u " . DB_USER . " -p'" . DB_PASSWORD . "' {$tempDbName} < {$sqlFile}");
+	}
 
-		$users = $wpdb->get_results("SELECT ID FROM {$wpdb->users}");
+	protected function anonymizeDataInTempDatabase($tempDbName)
+	{
+		$mysqli = new mysqli(DB_HOST, DB_USER, DB_PASSWORD, $tempDbName);
 
-		if (!$users) {
+		$result = $mysqli->query("SELECT ID FROM wp_users");
+
+		if ($result->num_rows === 0) {
 			WP_CLI::error("No users found in the database.");
-			return false;
+			return;
 		}
 
-		// TODO: Add support for Woocommerce data
-		foreach ($users as $user) {
+		while($user = $result->fetch_object()) {
 			$new_user_login = $this->faker->unique()->userName;
 			$new_user_nicename = $this->faker->unique()->userName;
 			$new_user_email = $this->faker->unique()->safeEmail;
@@ -116,27 +101,24 @@ class DatabaseAnonymizer
 				continue;
 			}
 
-			$update_result = $wpdb->update(
-				$wpdb->users,
-				[
-					'user_login' => $new_user_login,
-					'user_nicename' => $new_user_nicename,
-					'user_email' => $new_user_email,
-					'display_name' => $new_display_name
-				],
-				[
-					'ID' => $user->ID
-				]
-			);
+			$update = $mysqli->query("UPDATE wp_users SET user_login = '{$new_user_login}', user_nicename = '{$new_user_nicename}', user_email = '{$new_user_email}', display_name = '{$new_display_name}' WHERE ID = {$user->ID}");
 
-			if (false === $update_result) {
+			if (!$update) {
 				WP_CLI::error("Failed to update data for user with ID {$user->ID}.");
-				return false;
 			}
 		}
 
-		WP_CLI::success("All users anonymized.");
-		return true;
+		$mysqli->close();
+	}
+
+	protected function exportFromTempDatabase($tempDbName, $sqlFile)
+	{
+		exec("mysqldump -u " . DB_USER . " -p'" . DB_PASSWORD . "' {$tempDbName} > {$sqlFile}");
+	}
+
+	protected function deleteTempDatabase($tempDbName)
+	{
+		exec("mysql -u " . DB_USER . " -p'" . DB_PASSWORD . "' -e 'DROP DATABASE {$tempDbName}'");
 	}
 }
 
