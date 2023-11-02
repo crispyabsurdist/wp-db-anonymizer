@@ -4,7 +4,7 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInit5edeea78c96df4009468597a5468bad2
+class ComposerStaticInitb418b8b8633a1a557050598ce985004f
 {
     public static $files = array (
         '6e3fae29631ef280660b3cdad06f25a8' => __DIR__ . '/..' . '/symfony/deprecation-contracts/function.php',
@@ -25,12 +25,18 @@ class ComposerStaticInit5edeea78c96df4009468597a5468bad2
         ),
         'P' => 
         array (
+            'Psr\\SimpleCache\\' => 16,
             'Psr\\Container\\' => 14,
             'PhpOption\\' => 10,
         ),
         'M' => 
         array (
             'Mustangostang\\' => 14,
+        ),
+        'I' => 
+        array (
+            'Illuminate\\Contracts\\' => 21,
+            'Illuminate\\Container\\' => 21,
         ),
         'G' => 
         array (
@@ -67,6 +73,10 @@ class ComposerStaticInit5edeea78c96df4009468597a5468bad2
         array (
             0 => __DIR__ . '/..' . '/symfony/finder',
         ),
+        'Psr\\SimpleCache\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/psr/simple-cache/src',
+        ),
         'Psr\\Container\\' => 
         array (
             0 => __DIR__ . '/..' . '/psr/container/src',
@@ -78,6 +88,14 @@ class ComposerStaticInit5edeea78c96df4009468597a5468bad2
         'Mustangostang\\' => 
         array (
             0 => __DIR__ . '/..' . '/wp-cli/mustangostang-spyc/src',
+        ),
+        'Illuminate\\Contracts\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/illuminate/contracts',
+        ),
+        'Illuminate\\Container\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/illuminate/container',
         ),
         'GrahamCampbell\\ResultType\\' => 
         array (
@@ -135,10 +153,10 @@ class ComposerStaticInit5edeea78c96df4009468597a5468bad2
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->prefixLengthsPsr4 = ComposerStaticInit5edeea78c96df4009468597a5468bad2::$prefixLengthsPsr4;
-            $loader->prefixDirsPsr4 = ComposerStaticInit5edeea78c96df4009468597a5468bad2::$prefixDirsPsr4;
-            $loader->prefixesPsr0 = ComposerStaticInit5edeea78c96df4009468597a5468bad2::$prefixesPsr0;
-            $loader->classMap = ComposerStaticInit5edeea78c96df4009468597a5468bad2::$classMap;
+            $loader->prefixLengthsPsr4 = ComposerStaticInitb418b8b8633a1a557050598ce985004f::$prefixLengthsPsr4;
+            $loader->prefixDirsPsr4 = ComposerStaticInitb418b8b8633a1a557050598ce985004f::$prefixDirsPsr4;
+            $loader->prefixesPsr0 = ComposerStaticInitb418b8b8633a1a557050598ce985004f::$prefixesPsr0;
+            $loader->classMap = ComposerStaticInitb418b8b8633a1a557050598ce985004f::$classMap;
 
         }, null, ClassLoader::class);
     }
